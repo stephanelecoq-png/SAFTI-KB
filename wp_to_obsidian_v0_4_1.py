@@ -21,8 +21,10 @@ articles_dir.mkdir(parents=True, exist_ok=True)
 
 def slugify(text):
     text = text.lower()
-    rep = {"é":"e","è":"e","ê":"e","à":"a","â":"a","î":"i","ï":"i","ô":"o","ö":"o","ù":"u","û":"u","ç":"c","'":"","’":""}
-    for a,b in rep.items():
+    for a,b in {
+        "é":"e","è":"e","ê":"e","à":"a","â":"a","î":"i","ï":"i",
+        "ô":"o","ö":"o","ù":"u","û":"u","ç":"c","'":"","’":""
+    }.items():
         text=text.replace(a,b)
     return re.sub(r"[^a-z0-9]+","-",text).strip("-")
 
@@ -30,14 +32,21 @@ def clean_html(html):
     if not html:
         return ""
 
-    # Supprime les commentaires Gutenberg
+    # Gutenberg comments
     html = re.sub(r"<!--\s*/?wp:.*?-->", "", html, flags=re.DOTALL)
 
-    # Conversion HTML -> Markdown
+    # Remove first H1 (we generate it ourselves)
+    html = re.sub(r"<h1[^>]*>.*?</h1>", "", html, count=1, flags=re.DOTALL|re.IGNORECASE)
+
+    # HTML -> Markdown
     text = md(html, heading_style="ATX")
 
-    # Nettoyage
+    # Normalize spaces/newlines
+    text = text.replace("\r\n", "\n")
+    text = re.sub(r"[ \t]+\n", "\n", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
+    text = re.sub(r"[ \t]{2,}", " ", text)
+
     return text.strip()
 
 with open(csv_file, encoding="utf-8-sig", newline="") as f:
@@ -80,37 +89,29 @@ for row in rows:
 
     content=clean_html(row.get(content_f,""))
 
-    created=row.get(created_f,"")[:10]
-    modified=row.get(modified_f,"")[:10]
-    status=row.get(status_f,"")
-    pid=row.get(id_f,"")
-    url=row.get(url_f,"")
-    excerpt=row.get(excerpt_f,"").replace('"','\\"')
-    image=row.get(image_f,"")
-    seo_title=row.get(seo_title_f,"").replace('"','\\"')
-    seo_desc=row.get(seo_desc_f,"").replace('"','\\"')
-    author=f"{row.get(author_first_f,'').strip()} {row.get(author_last_f,'').strip()}".strip()
+    def esc(v): return (v or "").replace('"','\\"')
+
+    yaml=[
+        "---",
+        f'title: "{esc(title)}"',
+        f"slug: {slug}",
+        "type: article",
+        f"created: {row.get(created_f,'')[:10]}",
+        f"modified: {row.get(modified_f,'')[:10]}",
+        f"status: {row.get(status_f,'')}",
+        f'author: "{esc((row.get(author_first_f,"")+" "+row.get(author_last_f,"")).strip())}"',
+        f"wordpress_id: {row.get(id_f,'')}",
+        f'source: "{esc(row.get(url_f,""))}"',
+        f'excerpt: "{esc(row.get(excerpt_f,""))}"',
+        f'featured_image: "{esc(row.get(image_f,""))}"',
+        f'seo_title: "{esc(row.get(seo_title_f,""))}"',
+        f'seo_description: "{esc(row.get(seo_desc_f,""))}"',
+        "categories:"
+    ]
 
     cats=[c.strip() for c in re.split(r"[;,|]",row.get(cat_f,"")) if c.strip()]
     tags=[t.strip() for t in re.split(r"[;,|]",row.get(tag_f,"")) if t.strip()]
 
-    yaml=[
-        "---",
-        f'title: "{title}"',
-        f"slug: {slug}",
-        "type: article",
-        f"created: {created}",
-        f"modified: {modified}",
-        f"status: {status}",
-        f'author: "{author}"',
-        f"wordpress_id: {pid}",
-        f'source: "{url}"',
-        f'excerpt: "{excerpt}"',
-        f'featured_image: "{image}"',
-        f'seo_title: "{seo_title}"',
-        f'seo_description: "{seo_desc}"',
-        "categories:"
-    ]
     yaml.extend(f"  - {c}" for c in cats)
     yaml.append("tags:")
     yaml.extend(f"  - {t}" for t in tags)
@@ -118,7 +119,7 @@ for row in rows:
 
     concepts="\n".join(f"[[{t}]]" for t in tags)
 
-    mdfile="\n".join(yaml)+f"""
+    output="\n".join(yaml)+f"""
 
 # {title}
 
@@ -133,8 +134,8 @@ for row in rows:
 ## Notes
 
 """
-    (articles_dir/f"{slug}.md").write_text(mdfile,encoding="utf-8")
+    (articles_dir/f"{slug}.md").write_text(output,encoding="utf-8")
     index.append(f"- [[{slug}]]")
 
 (vault/"index.md").write_text("\n".join(index),encoding="utf-8")
-print("Export terminé :",vault)
+print(f"Export terminé : {vault} ({len(rows)} articles)")
