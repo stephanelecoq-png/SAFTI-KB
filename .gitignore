@@ -1,0 +1,50 @@
+# Python
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual env
+
+.venv/
+venv/
+env/
+
+# macOS
+
+.DS_Store
+
+# VS Code
+
+.vscode/
+
+# Obsidian
+
+.obsidian/
+
+# Logs
+
+*.log
+
+# Temporary
+
+tmp/
+temp/
+
+# Build
+
+dist/
+build/
+
+# Tests
+
+.pytest_cache/
+
+# IDE
+
+.idea/
+
+# Local exports
+
+exports/

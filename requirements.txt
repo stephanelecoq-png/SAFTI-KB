@@ -1,0 +1,7 @@
+beautifulsoup4>=4.13
+
+PyYAML>=6.0
+
+Jinja2>=3.1
+
+python-slugify>=8.0
