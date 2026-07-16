@@ -1,11 +1,8 @@
-from src.parser import CSVParser
+from src.exporter import exporter
 
 
 def main():
-    parser = CSVParser("Articles-Export.csv")
-    articles = parser.parse()
-
-    print(f"{len(articles)} article(s) chargé(s).")
+    exporter("Articles-Export.csv")
 
 
 if __name__ == "__main__":
