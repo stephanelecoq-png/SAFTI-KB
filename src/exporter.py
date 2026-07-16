@@ -13,12 +13,14 @@ def exporter(csv_file: str):
         print("Aucun article trouvé.")
         return
 
-    contenu = article_to_markdown(articles[0])
+    dossier_articles = Path("vault/articles")
+    dossier_articles.mkdir(parents=True, exist_ok=True)
 
-    write_text(
-        Path("test.md"),
-        contenu
-    )
+    for article in articles:
+        contenu = article_to_markdown(article)
 
-    print("Fichier test.md généré.")
-    print(f"{len(articles)} article(s) chargé(s).")
+        fichier = dossier_articles / f"{article.slug}.md"
+
+        write_text(fichier, contenu)
+
+    print(f"{len(articles)} article(s) exporté(s).")
